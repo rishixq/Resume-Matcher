@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume Matcher AI (Single File)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* CSS STYLING */
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; display: flex; gap: 20px; height: 90vh; }
+        .column { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #334155; flex: 1; display: flex; flex-direction: column; }
+        textarea { background: #020617; color: white; border: 1px solid #334155; padding: 10px; flex: 1; resize: none; }
+        h2, h3 { margin: 0 0 10px 0; color: var(--accent); }
+        .score-box { text-align: center; padding: 20px; border: 2px solid #334155; border-radius: 50%; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto; }
+        .tag { display: inline-block; background: rgba(248, 113, 113, 0.2); color: #f87171; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div id="app" style="display: flex; width: 100%; gap: 20px;">
+    <div class="column">
+        <div class="card">
+            <h3>Job Description (Target)</h3>
+            <textarea v-model="jobDesc" placeholder="Paste Job Description here..."></textarea>
+        </div>
+        <div class="card">
+            <h3>Your Resume (Source)</h3>
+            <textarea v-model="resume" placeholder="Paste Resume text here..."></textarea>
+        </div>
+    </div>
+
+    <div class="column" style="flex: 0.6;">
+        <div class="card" style="flex: 0;">
+            <h3>Match Score</h3>
+            <div class="score-box" :style="{ borderColor: scoreColor, color: scoreColor }">
+                {{ score }}%
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⚠️ Missing Keywords</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8;">High-value words in JD, missing in Resume:</p>
+            <div>
+                <span v-for="word in missing" class="tag">{{ word }}</span>
+                <span v-if="missing.length === 0" style="color:#4ade80">No missing keywords!</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. THE MATH ENGINE (NLP) ---
+    const stopWords = new Set(["a","an","the","and","or","but","in","on","with","to","for","of","is","are","was","were","it","that","this","my","your"]);
+
+    function tokenize(text) {
+        return text.toLowerCase()
+            .replace(/[^\w\s]/g, '') // Remove punctuation
+            .split(/\s+/)            // Split by space
+            .filter(w => w.length > 2 && !stopWords.has(w)); // Remove short/stop words
+    }
+
+    function getFrequency(tokens) {
+        const freq = {};
+        tokens.forEach(w => freq[w] = (freq[w] || 0) + 1);
+        return freq;
+    }
+
+    function cosineSimilarity(textA, textB) {
+        const tokensA = tokenize(textA);
+        const tokensB = tokenize(textB);
+        const vocab = new Set([...tokensA, ...tokensB]);
+
+        const freqA = getFrequency(tokensA);
+        const freqB = getFrequency(tokensB);
+
+        let dotProduct = 0, magA = 0, magB = 0;
+
+        vocab.forEach(w => {
+            const a = freqA[w] || 0;
+            const b = freqB[w] || 0;
+            dotProduct += a * b;
+            magA += a * a;
+            magB += b * b;
+        });
+
+        const magnitude = Math.sqrt(magA) * Math.sqrt(magB);
+        return magnitude === 0 ? 0 : (dotProduct / magnitude);
+    }
+
+    // --- 2. THE VUE APP ---
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+        setup() {
+            const jobDesc = ref("Senior Python Developer. Must know SQL, AWS, and Machine Learning.");
+            const resume = ref("I am a Python developer with SQL skills.");
+
+            const score = computed(() => {
+                const s = cosineSimilarity(jobDesc.value, resume.value);
+                return (s * 100).toFixed(1);
+            });
+
+            const missing = computed(() => {
+                const jdTokens = getFrequency(tokenize(jobDesc.value));
+                const resTokens = new Set(tokenize(resume.value));
+                // Find words in JD that are NOT in Resume, sort by importance
+                return Object.keys(jdTokens)
+                    .filter(w => !resTokens.has(w))
+                    .sort((a, b) => jdTokens[b] - jdTokens[a]);
+            });
+
+            const scoreColor = computed(() => {
+                return score.value > 70 ? '#4ade80' : (score.value > 40 ? '#fbbf24' : '#f87171');
+            });
+
+            return { jobDesc, resume, score, missing, scoreColor };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
