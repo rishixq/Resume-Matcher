@@ -4,8 +4,6 @@ A browser-based **Natural Language Processing (NLP)** engine that analyzes the s
 
 > **Key Feature:** Built entirely from scratch using **Vanilla JavaScript** and **linear algebra**, without reliance on external ML libraries like Python's `scikit-learn` or `NLTK`.
 
-![Project Screenshot](screenshot.png)
-*(Place your screenshot here)*
 
 ---
 
@@ -32,7 +30,3 @@ Raw text is processed through a custom pipeline:
 ### 2. Vectorization (Bag of Words)
 The text is converted into a Frequency Map (Vector), where each unique word represents a dimension in vector space.
 
-### 3. Cosine Similarity Algorithm
-The relevance score is calculated by measuring the cosine of the angle between the Job Vector ($\mathbf{A}$) and Resume Vector ($\mathbf{B}$).
-
-$$ \text{similarity} = \cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A
